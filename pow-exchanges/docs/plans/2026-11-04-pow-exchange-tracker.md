@@ -1,5 +1,45 @@
 # POW Exchange Tracker (RU–UA) Implementation Plan
 
+## Status & live findings (2026-11-04) — read first; these override the task text below
+- **Done and committed** on `claude/ecstatic-bell-yeogs6` (15 tests green): Task 0 scaffold,
+  Task 1 DB, Task 2 prefilter, Task 3 LLM sync extraction. `Item` no longer carries
+  `kind/n_to_ua/n_to_ru` — every source, Wikipedia included, goes through the LLM.
+- **Default model is `claude-haiku-5-5`** (user's choice; `POWX_MODEL` overrides). Haiku has no
+  server-side fallback, so `llm.extract` sends `fallbacks`/`betas` only for Opus/Sonnet/Fable.
+- **No Anthropic credentials in this session** (`ANTHROPIC_API_KEY` unset, API → 401). Live LLM
+  checks and the 200-sample cost gate are blocked until the user adds the key to the
+  environment secrets; everything else is testable live.
+- **Network:** t.me, en.wikipedia.org (needs a User-Agent, else 429), pravda.com.ua RSS,
+  tass.ru RSS all reachable. uk./ru.wikipedia.org blocked.
+- **Telegram handles verified:** `Koord_Shtab` (not `koordshtab`), `V_Zelenskiy_official`,
+  `DIUkraine`, `mod_russia` → 200. `dmytro_lubinets`, `moskalkova_tatiana` and guessed variants
+  → 302 (no public preview / wrong handle) — leave out of `sources.json`, list in README as
+  "ask the user for the correct handle". Do not guess more handles.
+- **Telegram markup verified** on a live page: `div.tgme_widget_message[data-post]`,
+  `.tgme_widget_message_text`, `.tgme_widget_message_date time[datetime]` (UTC). A page can
+  yield few parsed posts (albums/service messages), so paginate with the page's
+  `<link rel="prev" href="/s/<ch>?before=N">` when present, falling back to the oldest id.
+  Save the live page as `tests/fixtures/tg_live.html` and add a parse test on it.
+  Note: Koord_Shtab mentions captivity in almost every post → most posts pass the prefilter
+  (≈24k posts; with Haiku via Batches still ≈ $1–2 total).
+- **Wikipedia replaces Task 6's table parser:** the en article
+  "Prisoners of war in the Russo-Ukrainian war (2022–present)" has **no wikitable**; exchanges
+  are prose in section "Prisoner and human remains exchanges". New `fetchers/wikipedia.py`:
+  parse API (with User-Agent), split that section (and any `<p>`/`<li>` in the article
+  mentioning "exchang"/"swap") into paragraph `Item`s (`external_id = "wiki:" + text_hash`,
+  `published_at` = fetch time, url = article URL) → normal prefilter → LLM, tier 3. Tier 3 is
+  never primary while tier 1/2 exists; such events show "no primary source found".
+  Clustering of a Wikipedia paragraph relies on the LLM's `exchange_date`; a paragraph with
+  only a month ("September 2024") gets `exchange_date=null` and simply attaches or stays
+  unassigned (number-less/undated mentions never found events — but a dated-by-fetch-time
+  wiki paragraph must not found an event either: in `recluster`, skip tier-3 mentions without
+  `exchange_date`).
+- **Remaining order:** Task 3b batch → Task 4 Telegram (+ live fixture) → Task 5 RSS (test on
+  live feeds too) → Task 6 Wikipedia (prose version above) → Tasks 7–12 as written → live
+  smoke: `crawl update` against real sources with the LLM step stubbed until a key exists.
+- **Task 13 (new, after the user confirms):** GitHub Actions workflow (tests on push) and a
+  VPS setup section (self-hosted runner + Docker deploy + scheduled update).
+
 > **For Claude:** Execute this plan task-by-task (superpowers `executing-plans` style): for every
 > task follow the steps literally — failing test → run → minimal code → run → commit. No step
 > skipping, no batching of commits. Stop and report if a test fails for an unexpected reason.
