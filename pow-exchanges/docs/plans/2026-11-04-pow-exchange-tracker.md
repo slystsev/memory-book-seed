@@ -1,8 +1,20 @@
 # POW Exchange Tracker (RU–UA) Implementation Plan
 
 ## Status & live findings (2026-11-04) — read first; these override the task text below
-- **Done and committed** on `claude/ecstatic-bell-yeogs6` (15 tests green): Task 0 scaffold,
-  Task 1 DB, Task 2 prefilter, Task 3 LLM sync extraction. `Item` no longer carries
+- **Done and committed** on `claude/ecstatic-bell-yeogs6` (25 tests green): Task 0 scaffold,
+  Task 1 DB, Task 2 prefilter, Task 3 LLM sync extraction, Task 3b batch extraction
+  (`powx/llm_batch.py`), Task 4 Telegram fetcher (`powx/http.py`, `powx/fetchers/telegram.py`;
+  `parse_page` returns `(items, prev_cursor)`; verified live: 4 pages of Koord_Shtab walked back,
+  7–11 posts/page, ~90 % pass the prefilter). Not pushed yet.
+- **Also done (35 tests green, last commit e3d283b):** Task 5 RSS (live fixtures
+  `tests/fixtures/rss_{pravda,tass}.xml`; live: pravda 20 items / 4 candidates, TASS 100 / 9),
+  Task 6 Wikipedia (prose `<p>` + `ol.references` items dated via COinS `rft.date`, url = the
+  cited article; live: 37 items incl. BBC/Al Jazeera/Reuters exchange headlines), and
+  `powx/http.py` now honours `Retry-After` (Wikipedia rate-limits the shared cloud IP).
+- **Pushed** to `origin/claude/ecstatic-bell-yeogs6` through e3d283b.
+- **Next:** Task 7 cluster (pure) → Task 8 recluster (skip tier-3 mentions without
+  `exchange_date`) → Task 9 crawl + `sources.json` (verified handles only) → 10 server →
+  11 dashboard → 12 docs/Docker/smoke → push. `Item` no longer carries
   `kind/n_to_ua/n_to_ru` — every source, Wikipedia included, goes through the LLM.
 - **Default model is `claude-haiku-5-5`** (user's choice; `POWX_MODEL` overrides). Haiku has no
   server-side fallback, so `llm.extract` sends `fallbacks`/`betas` only for Opus/Sonnet/Fable.
