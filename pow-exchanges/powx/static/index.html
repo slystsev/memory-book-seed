@@ -1,1 +1,275 @@
-<!doctype html><html><body>placeholder</body></html>
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>POW Exchange Tracker</title>
+<style>
+:root {
+  color-scheme: light;
+  --surface: #fcfcfb; --surface-2: #f3f2ef; --border: #e2e1dc;
+  --text-primary: #0b0b0b; --text-secondary: #52514e; --text-muted: #6f6e69;
+  --grid: #e9e8e4; --axis: #b9b8b2;
+  --series-ua: #2a78d6; --series-ru: #eb6834;
+  --warn-bg: #fff4dc; --link: #1c5cab;
+}
+@media (prefers-color-scheme: dark) {
+  :root:where(:not([data-theme="light"])) {
+    color-scheme: dark;
+    --surface: #1a1a19; --surface-2: #242423; --border: #383835;
+    --text-primary: #f0efec; --text-secondary: #c3c2b7; --text-muted: #9a998f;
+    --grid: #2e2e2c; --axis: #5a5955;
+    --series-ua: #3987e5; --series-ru: #d95926;
+    --warn-bg: #3a2f14; --link: #86b6ef;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --surface: #1a1a19; --surface-2: #242423; --border: #383835;
+  --text-primary: #f0efec; --text-secondary: #c3c2b7; --text-muted: #9a998f;
+  --grid: #2e2e2c; --axis: #5a5955;
+  --series-ua: #3987e5; --series-ru: #d95926;
+  --warn-bg: #3a2f14; --link: #86b6ef;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--surface); color: var(--text-primary);
+  font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+main { max-width: 1100px; margin: 0 auto; padding: 24px 16px 48px; }
+h1 { font-size: 22px; margin: 0 0 4px; }
+h2 { font-size: 16px; margin: 32px 0 12px; }
+.sub { color: var(--text-secondary); margin: 0 0 20px; }
+a { color: var(--link); }
+.tiles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+.tile { background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; }
+.tile .label { color: var(--text-secondary); font-size: 13px; display: flex; align-items: center; gap: 6px; }
+.tile .value { font-size: 28px; font-weight: 650; font-variant-numeric: tabular-nums; margin-top: 2px; }
+.swatch { width: 10px; height: 10px; border-radius: 2px; display: inline-block; flex: none; }
+.chart-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+.legend { display: flex; gap: 16px; color: var(--text-secondary); font-size: 13px; }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+button.toggle { font: inherit; font-size: 13px; color: var(--text-primary); background: var(--surface-2);
+  border: 1px solid var(--border); border-radius: 6px; padding: 4px 10px; cursor: pointer; }
+.chart-wrap { position: relative; margin-top: 8px; }
+svg { display: block; width: 100%; height: auto; overflow: visible; }
+.tick { fill: var(--text-muted); font-size: 11px; }
+.tooltip { position: absolute; pointer-events: none; background: var(--surface); border: 1px solid var(--border);
+  border-radius: 8px; padding: 8px 10px; font-size: 13px; box-shadow: 0 4px 16px rgb(0 0 0 / .12);
+  white-space: nowrap; display: none; z-index: 2; }
+.tooltip b { display: block; margin-bottom: 2px; }
+.tooltip .row { display: flex; align-items: center; gap: 6px; color: var(--text-secondary); }
+.tooltip .row strong { color: var(--text-primary); font-variant-numeric: tabular-nums; margin-left: auto; padding-left: 12px; }
+.scroll { overflow-x: auto; border: 1px solid var(--border); border-radius: 10px; }
+table { border-collapse: collapse; width: 100%; font-size: 14px; }
+th, td { text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+th { color: var(--text-secondary); font-weight: 600; font-size: 13px; background: var(--surface-2); }
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+tr.event { cursor: pointer; }
+tr.event:hover td { background: var(--surface-2); }
+tr.detail td { white-space: normal; background: var(--surface-2); }
+.mention { padding: 6px 0; border-bottom: 1px dashed var(--border); }
+.mention:last-child { border-bottom: 0; }
+.mention .meta { color: var(--text-secondary); font-size: 13px; }
+.mention mark { background: var(--warn-bg); color: inherit; padding: 0 2px; }
+.badge { font-size: 12px; background: var(--warn-bg); border-radius: 4px; padding: 1px 6px; }
+footer { margin-top: 32px; color: var(--text-muted); font-size: 13px; }
+footer .err { color: var(--text-secondary); }
+.empty { color: var(--text-secondary); padding: 24px; text-align: center; }
+@media (max-width: 640px) {
+  .tiles { grid-template-columns: repeat(2, 1fr); }
+  .tile .value { font-size: 22px; }
+}
+</style>
+</head>
+<body>
+<main>
+  <h1>POW exchanges, Russia–Ukraine</h1>
+  <p class="sub">Exchange events merged from official channels, news and Wikipedia. Each event shows its primary source; click a row to see every mention.</p>
+
+  <section class="tiles" aria-label="Totals">
+    <div class="tile"><div class="label">Exchanges</div><div class="value" id="t-ex">–</div></div>
+    <div class="tile"><div class="label"><i class="swatch" style="background:var(--series-ua)"></i>Returned to Ukraine</div><div class="value" id="t-ua">–</div></div>
+    <div class="tile"><div class="label"><i class="swatch" style="background:var(--series-ru)"></i>Returned to Russia</div><div class="value" id="t-ru">–</div></div>
+    <div class="tile"><div class="label">Last exchange</div><div class="value" id="t-last">–</div></div>
+  </section>
+
+  <section>
+    <div class="chart-head">
+      <h2>People returned per month</h2>
+      <div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap">
+        <div class="legend">
+          <span><i class="swatch" style="background:var(--series-ua)"></i>Returned to Ukraine</span>
+          <span><i class="swatch" style="background:var(--series-ru)"></i>Returned to Russia</span>
+        </div>
+        <button class="toggle" id="view-toggle" aria-pressed="false">Show table</button>
+      </div>
+    </div>
+    <div class="chart-wrap" id="chart-wrap">
+      <svg id="chart" role="img" aria-label="Bar chart of people returned per month to each side"></svg>
+      <div class="tooltip" id="tooltip"></div>
+    </div>
+    <div class="scroll" id="month-table" hidden></div>
+  </section>
+
+  <section>
+    <h2>Exchange events</h2>
+    <div class="scroll"><table>
+      <thead><tr><th>Date</th><th class="num">To Ukraine</th><th class="num">To Russia</th><th>Primary source</th><th class="num">Mentions</th><th class="num">Sources</th></tr></thead>
+      <tbody id="events"><tr><td colspan="6" class="empty">Loading…</td></tr></tbody>
+    </table></div>
+  </section>
+
+  <footer id="footer"></footer>
+</main>
+<script>
+const fmt = new Intl.NumberFormat("en-US");
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const n = (v) => (v == null ? "–" : fmt.format(v));
+const dmy = (iso) => iso ? iso.slice(0, 10).split("-").reverse().join(".") : "–";
+const monthName = (m) => new Date(m + "-01T00:00:00Z").toLocaleDateString("en-GB", {month: "short", year: "numeric", timeZone: "UTC"});
+const api = (p) => fetch(p).then((r) => r.json());
+
+async function loadStats() {
+  const s = await api("/api/stats");
+  $("t-ex").textContent = n(s.exchanges);
+  $("t-ua").textContent = n(s.to_ua);
+  $("t-ru").textContent = n(s.to_ru);
+  $("t-last").textContent = dmy(s.last_date);
+  return s;
+}
+
+function niceMax(v) {
+  if (v <= 0) return 10;
+  const p = Math.pow(10, Math.floor(Math.log10(v)));
+  for (const k of [1, 2, 2.5, 5, 10]) if (k * p >= v) return k * p;
+  return 10 * p;
+}
+
+function drawChart(rows) {
+  const svg = $("chart"), wrap = $("chart-wrap"), tip = $("tooltip");
+  const W = Math.max(320, wrap.clientWidth), H = 260;
+  const m = {top: 8, right: 8, bottom: 28, left: 44};
+  const iw = W - m.left - m.right, ih = H - m.top - m.bottom;
+  svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+  if (!rows.length) { svg.innerHTML = `<text x="${W/2}" y="${H/2}" text-anchor="middle" class="tick">No exchange events yet</text>`; return; }
+  const max = niceMax(Math.max(...rows.map((r) => Math.max(r.to_ua, r.to_ru))));
+  const step = iw / rows.length;
+  const bw = Math.max(2, Math.min(12, (step - 6) / 2));     // thin bars, 2px gap inside a pair
+  const y = (v) => m.top + ih - (v / max) * ih;
+  const bar = (x, v, color) => {
+    if (!v) return "";
+    const h = Math.max(1, (v / max) * ih), r = Math.min(4, bw / 2, h);
+    const x0 = x, x1 = x + bw, yb = m.top + ih, yt = yb - h;
+    return `<path fill="${color}" d="M${x0},${yb}V${yt + r}Q${x0},${yt} ${x0 + r},${yt}H${x1 - r}Q${x1},${yt} ${x1},${yt + r}V${yb}Z"/>`;
+  };
+  let g = "";
+  for (let i = 0; i <= 4; i++) {
+    const v = (max / 4) * i, yy = y(v);
+    g += `<line x1="${m.left}" x2="${W - m.right}" y1="${yy}" y2="${yy}" stroke="var(--grid)"/>`;
+    g += `<text class="tick" x="${m.left - 6}" y="${yy + 4}" text-anchor="end">${fmt.format(v)}</text>`;
+  }
+  g += `<line x1="${m.left}" x2="${W - m.right}" y1="${m.top + ih}" y2="${m.top + ih}" stroke="var(--axis)"/>`;
+  const labelEvery = Math.ceil(rows.length / Math.max(1, Math.floor(iw / 64)));
+  rows.forEach((r, i) => {
+    const cx = m.left + step * i + step / 2;
+    g += bar(cx - bw - 1, r.to_ua, "var(--series-ua)") + bar(cx + 1, r.to_ru, "var(--series-ru)");
+    if (i % labelEvery === 0) g += `<text class="tick" x="${cx}" y="${H - 8}" text-anchor="middle">${monthName(r.month)}</text>`;
+    g += `<rect class="hit" data-i="${i}" x="${m.left + step * i}" y="${m.top}" width="${step}" height="${ih}" fill="transparent"/>`;
+  });
+  svg.innerHTML = g;
+  svg.querySelectorAll(".hit").forEach((el) => {
+    el.addEventListener("pointerenter", () => {
+      const r = rows[+el.dataset.i];
+      tip.innerHTML = `<b>${monthName(r.month)}</b>
+        <div class="row"><i class="swatch" style="background:var(--series-ua)"></i>To Ukraine<strong>${n(r.to_ua)}</strong></div>
+        <div class="row"><i class="swatch" style="background:var(--series-ru)"></i>To Russia<strong>${n(r.to_ru)}</strong></div>
+        <div class="row">Exchanges<strong>${r.exchanges}</strong></div>`;
+      tip.style.display = "block";
+      el.setAttribute("fill", "rgb(127 127 127 / .08)");
+      const scale = wrap.clientWidth / W;
+      const x = (+el.getAttribute("x") + step / 2) * scale;
+      const left = Math.min(Math.max(0, x - tip.offsetWidth / 2), wrap.clientWidth - tip.offsetWidth);
+      tip.style.left = left + "px";
+      tip.style.top = "0px";
+    });
+    el.addEventListener("pointerleave", () => { tip.style.display = "none"; el.setAttribute("fill", "transparent"); });
+  });
+}
+
+function drawMonthTable(rows) {
+  $("month-table").innerHTML = `<table><thead><tr><th>Month</th><th class="num">To Ukraine</th><th class="num">To Russia</th><th class="num">Exchanges</th></tr></thead><tbody>${
+    rows.map((r) => `<tr><td>${monthName(r.month)}</td><td class="num">${n(r.to_ua)}</td><td class="num">${n(r.to_ru)}</td><td class="num">${r.exchanges}</td></tr>`).join("")
+  }</tbody></table>`;
+}
+
+function highlight(text, quote) {
+  const t = esc(text.length > 400 ? text.slice(0, 400) + "…" : text);
+  if (!quote) return t;
+  const q = esc(quote);
+  return t.includes(q) ? t.replace(q, `<mark>${q}</mark>`) : `<mark>${q}</mark><br>${t}`;
+}
+
+async function toggleEvent(tr, ev) {
+  const next = tr.nextElementSibling;
+  if (next && next.classList.contains("detail")) { next.remove(); tr.setAttribute("aria-expanded", "false"); return; }
+  const ms = await api(`/api/events/${ev.id}/mentions`);
+  const d = document.createElement("tr");
+  d.className = "detail";
+  d.innerHTML = `<td colspan="6">${ms.map((m) => `<div class="mention">
+      <div class="meta">${dmy(m.published_at)} · <a href="${esc(m.url)}" target="_blank" rel="noopener">${esc(m.source_id)}</a>
+        · tier ${m.tier} · to UA ${n(m.n_to_ua)} · to RU ${n(m.n_to_ru)}${m.forwarded_from ? " · forwarded" : ""}</div>
+      <div>${highlight(m.text, m.quote)}</div></div>`).join("")}</td>`;
+  tr.after(d);
+  tr.setAttribute("aria-expanded", "true");
+}
+
+async function loadEvents() {
+  const evs = await api("/api/events");
+  const tb = $("events");
+  if (!evs.length) { tb.innerHTML = `<tr><td colspan="6" class="empty">No exchange events yet — run the crawler and LLM extraction.</td></tr>`; return; }
+  tb.innerHTML = "";
+  for (const ev of evs) {
+    const tr = document.createElement("tr");
+    tr.className = "event";
+    tr.tabIndex = 0;
+    tr.setAttribute("aria-expanded", "false");
+    const src = ev.primary_tier === 3
+      ? `<span class="badge">⚠ no primary source found</span> <a href="${esc(ev.primary_url)}" target="_blank" rel="noopener">reference</a>`
+      : `<a href="${esc(ev.primary_url)}" target="_blank" rel="noopener">${esc(ev.source_id)}</a>`;
+    tr.innerHTML = `<td>${dmy(ev.date)}</td><td class="num">${n(ev.n_to_ua)}</td><td class="num">${n(ev.n_to_ru)}</td>
+      <td>${src}</td><td class="num">${ev.mention_count}</td><td class="num">${ev.source_count}</td>`;
+    tr.addEventListener("click", (e) => { if (e.target.tagName !== "A") toggleEvent(tr, ev); });
+    tr.addEventListener("keydown", (e) => { if (e.key === "Enter") toggleEvent(tr, ev); });
+    tb.append(tr);
+  }
+}
+
+async function loadFooter(stats) {
+  const srcs = await api("/api/sources");
+  const last = srcs.map((s) => s.last_run_at).filter(Boolean).sort().pop();
+  const errs = srcs.filter((s) => s.last_error);
+  $("footer").innerHTML = `Last update: ${last ? new Date(last).toLocaleString("en-GB") : "never"}
+    · ${srcs.length} sources · ${n(stats.mentions)} exchange mentions · ${n(stats.pending_llm)} posts awaiting LLM extraction
+    ${errs.map((s) => `<div class="err">⚠ ${esc(s.id)}: ${esc(s.last_error)}</div>`).join("")}`;
+}
+
+let months = [];
+$("view-toggle").addEventListener("click", (e) => {
+  const showTable = e.target.getAttribute("aria-pressed") !== "true";
+  e.target.setAttribute("aria-pressed", String(showTable));
+  e.target.textContent = showTable ? "Show chart" : "Show table";
+  $("chart-wrap").hidden = showTable;
+  $("month-table").hidden = !showTable;
+});
+window.addEventListener("resize", () => drawChart(months));
+
+(async () => {
+  const stats = await loadStats();
+  months = await api("/api/monthly");
+  drawChart(months);
+  drawMonthTable(months);
+  await Promise.all([loadEvents(), loadFooter(stats)]);
+})();
+</script>
+</body>
+</html>
