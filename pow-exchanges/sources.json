@@ -1,0 +1,9 @@
+{"sources": [
+  {"id": "koord_shtab", "kind": "telegram", "handle": "Koord_Shtab", "side": "ua", "tier": 1},
+  {"id": "zelenskiy", "kind": "telegram", "handle": "V_Zelenskiy_official", "side": "ua", "tier": 1},
+  {"id": "gur", "kind": "telegram", "handle": "DIUkraine", "side": "ua", "tier": 1},
+  {"id": "mod_russia", "kind": "telegram", "handle": "mod_russia", "side": "ru", "tier": 1},
+  {"id": "pravda_ua", "kind": "rss", "handle": "https://www.pravda.com.ua/rss/", "side": "ua", "tier": 2},
+  {"id": "tass", "kind": "rss", "handle": "https://tass.ru/rss/v2.xml", "side": "ru", "tier": 2},
+  {"id": "wikipedia", "kind": "wikipedia", "handle": "Prisoners of war in the Russo-Ukrainian war (2022–present)", "side": "neutral", "tier": 3}
+]}
