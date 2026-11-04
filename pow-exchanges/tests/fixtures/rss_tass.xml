@@ -1,0 +1,27 @@
+<?xml version='1.0' encoding='utf-8'?>
+<rss xmlns:ns0="https://www.w3.org/2005/Atom" version="2.0"><channel><title>ТАСС</title>
+<description>ИНФОРМАЦИОННОЕ АГЕНТСТВО РОССИИ ТАСС</description>
+<language>ru-ru</language>
+<link>https://tass.ru</link>
+<copyright>ТАСС</copyright>
+<image><url>https://tass.ru/i/rss/logo.png</url>
+<title>ТАСС</title>
+<link>https://tass.ru</link>
+</image>
+<ns0:link href="https://tass.ru/rss/v2.xml" rel="self" type="application/rss+xml" />
+<item><title>В Киеве снова ввели аварийные отключения света</title>
+<link>https://tass.ru/proisshestviya/28286193</link>
+<guid>https://tass.ru/proisshestviya/28286193</guid>
+<pubDate>Wed, 04 Nov 2026 16:28:36 +0300</pubDate>
+<description>Всего два часа назад столицу и Киевскую область перевели на подачу света по графикам после предыдущих аварийных отключений </description>
+<category>Происшествия</category>
+</item>
+<item><title>Школьники из разных регионов смогут посетить выставку "Христианская традиция. Наши дни"</title>
+<link>https://tass.ru/obschestvo/28285909</link>
+<guid>https://tass.ru/obschestvo/28285909</guid>
+<pubDate>Wed, 04 Nov 2026 16:28:15 +0300</pubDate>
+<description>Министр просвещения РФ Сергей Кравцов подчеркнул значимость того, чтобы дети не просто изучали историю по книгам и смотрели фильмы, но и соприкасались с ней через такие выставки</description>
+<category>Общество</category>
+</item>
+</channel>
+</rss>
